@@ -52,11 +52,10 @@ int write_to_memory(uint32_t pa)
 uint32_t num_blocks;
 uint32_t offset;
 uint32_t shift;	
-uint32_t val;
 uint32_t ind_x;
 uint32_t **lru_loc;
 int *lru_size;
-int assoc_size;
+int assoc_size = 1;
 /*
  * Initialize the cache depending on the input parameters S, A, and B 
  * and the statistics counter. The cache is declared in as extern in 
@@ -68,11 +67,11 @@ void init_lru(){
 	if (cache_associativity==2) assoc_size = num_blocks;
 	else if(cache_associativity==3) assoc_size = 2;
 	else if(cache_associativity==4) assoc_size = 4;
-	int temp = (num_blocks/assoc_size);
-	for (int i = 0;i<temp;i++){
+	//int temp = (num_blocks/assoc_size);
+	for (int i = 0;i<num_blocks/assoc_size;i++){
 		lru_loc[i] = calloc(assoc_size,sizeof(uint32_t));
 	}
-	lru_size = calloc(temp,sizeof(int));
+	lru_size = calloc(num_blocks/assoc_size,sizeof(int));
 }
 void initialize_cache()
 {
@@ -86,8 +85,8 @@ void initialize_cache()
 	num_blocks = cache_size/cache_block_size;
 	if(cache_associativity > 1) init_lru();
 	cache = malloc(num_blocks * sizeof(block_t));
-	int temp = (num_blocks/assoc_size);
-	for (int i = 0; i< temp;i++){
+	//int temp = (num_blocks/assoc_size);
+	for (int i = 0; i< num_blocks/assoc_size;i++){
 		cache[i] = malloc(assoc_size*sizeof(block_t));
 	}
 }
@@ -97,16 +96,18 @@ void initialize_cache()
  */
 void free_cache()
 {
-	int temp = (num_blocks/assoc_size);
-	for (int i = 0; i< temp;i++){
+	//int temp = (num_blocks/assoc_size);
+	for (int i = 0; i< num_blocks/assoc_size;i++){
 		free(cache[i]);
 	}
 	free(cache);
-	for (int i = 0;i<temp;i++){
-		free(lru_loc[i]);
+	if (cache_associativity > 1){
+		for (int i = 0;i<num_blocks/assoc_size;i++){
+			free(lru_loc[i]);
+		}
+		free(lru_loc);
+		free(lru_size);
 	}
-	free(lru_loc);
-	free(lru_size);
 }
 
 // Print cache statistics.
@@ -164,8 +165,7 @@ op_result_t read_from_cache(uint32_t pa)
 	cache_total_accesses++;
 	cache_read_accesses++;
 	shift = log2(cache_block_size);
-	val = pow(2,shift);
-	offset = pa & (val - 1);
+	offset = pa & (cache_block_size - 1);
 	pa >>= shift;
 	ind_x = cache_size/(cache_block_size*assoc_size);
 	shift = log2(ind_x);
@@ -217,8 +217,7 @@ op_result_t write_to_cache(uint32_t pa)
 	cache_total_accesses++;
 	cache_write_accesses++;
 	shift = log2(cache_block_size);
-	val = pow(2,shift);
-	offset = pa & (val - 1);
+	offset = pa & (cache_block_size - 1);
 	pa >>= shift;
 	ind_x = cache_size/(cache_block_size*assoc_size);
 	shift = log2(ind_x);
