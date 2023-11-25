@@ -20,7 +20,7 @@ void initialize_cache();
 void free_cache();
 void print_cache_statistics();
 int check_cache_parameters_valid();
-
+extern int check_exp();
 op_result_t read_from_cache(uint32_t pa);
 op_result_t write_to_cache(uint32_t pa);
 

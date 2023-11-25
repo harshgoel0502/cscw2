@@ -21,6 +21,7 @@ int check_page_table(uint32_t address);
 page_t *get_victim_page();
 void initialize_pt_system();
 void print_pt_statistics();
+void free_pt();
 void init_pt();
 void init_free_page_list(page_t** free_page_list);
 void set_dirty_bit_in_page_table(uint32_t address);
