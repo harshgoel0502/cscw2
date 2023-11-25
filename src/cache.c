@@ -55,23 +55,19 @@ uint32_t shift;
 uint32_t ind_x;
 uint32_t **lru_loc;
 int *lru_size;
-int assoc_size = 1;
+int assoc_size;
+int var_size;
 /*
  * Initialize the cache depending on the input parameters S, A, and B 
  * and the statistics counter. The cache is declared in as extern in 
  * include/cache.h file.
  */
 void init_lru(){
-	lru_loc = malloc(num_blocks*sizeof(uint32_t));
-	assoc_size = 1;
-	if (cache_associativity==2) assoc_size = num_blocks;
-	else if(cache_associativity==3) assoc_size = 2;
-	else if(cache_associativity==4) assoc_size = 4;
-	//int temp = (num_blocks/assoc_size);
-	for (int i = 0;i<num_blocks/assoc_size;i++){
+	lru_loc = malloc(var_size*sizeof(uint32_t*));
+	for (int i = 0;i<var_size;i++){
 		lru_loc[i] = calloc(assoc_size,sizeof(uint32_t));
 	}
-	lru_size = calloc(num_blocks/assoc_size,sizeof(int));
+	lru_size = calloc(var_size,sizeof(int));
 }
 void initialize_cache()
 {
@@ -83,11 +79,15 @@ void initialize_cache()
 	cache_write_accesses = 0;
 	cache_write_hits = 0;
 	num_blocks = cache_size/cache_block_size;
+	assoc_size = 1;
+	if (cache_associativity==2) assoc_size = num_blocks;
+	else if(cache_associativity==3) assoc_size = 2;
+	else if(cache_associativity==4) assoc_size = 4;
+	var_size = num_blocks/assoc_size;
 	if(cache_associativity > 1) init_lru();
-	cache = malloc(num_blocks * sizeof(block_t));
-	//int temp = (num_blocks/assoc_size);
-	for (int i = 0; i< num_blocks/assoc_size;i++){
-		cache[i] = malloc(assoc_size*sizeof(block_t));
+	cache = malloc(var_size * sizeof(block_t*));
+	for (int i = 0; i< var_size;i++){
+		cache[i] = calloc(assoc_size,sizeof(block_t));
 	}
 }
 
@@ -96,13 +96,12 @@ void initialize_cache()
  */
 void free_cache()
 {
-	//int temp = (num_blocks/assoc_size);
-	for (int i = 0; i< num_blocks/assoc_size;i++){
+	for (int i = 0; i< var_size;i++){
 		free(cache[i]);
 	}
 	free(cache);
 	if (cache_associativity > 1){
-		for (int i = 0;i<num_blocks/assoc_size;i++){
+		for (int i = 0;i<var_size;i++){
 			free(lru_loc[i]);
 		}
 		free(lru_loc);
@@ -113,6 +112,7 @@ void free_cache()
 // Print cache statistics.
 void print_cache_statistics()
 {
+	printf("\n* Cache Statistics *\n");
 	printf("total accesses: %d\n", cache_total_accesses);
 	printf("hits: %d\n", cache_hits);
 	printf("misses: %d\n", cache_misses);
@@ -137,15 +137,16 @@ int add_lru(uint32_t pa,int lru_ref){
 		for (int i = 0;i<lru_size[lru_ref];i++){
 			uint32_t temp_pa = lru_loc[lru_ref][i];
 			if (temp_pa == pa){
-				for (int j=i;j<lru_size[lru_ref];j++){
-					lru_loc[0][j] = lru_loc[0][j+1];
+				for (int j=i;j<lru_size[lru_ref]-1;j++){
+					lru_loc[lru_ref][j] = lru_loc[lru_ref][j+1];
 				}
-				lru_loc[0][lru_size[lru_ref]] = pa;
+				lru_loc[lru_ref][lru_size[lru_ref]-1] = pa;
 				return 0;
 			}
 		}
 		lru_size[lru_ref]++;
-		lru_loc[0][lru_size[lru_ref]]= pa;
+		lru_loc[lru_ref][lru_size[lru_ref]-1]= pa;
+		
 		return 1;
 	}
 }
@@ -301,13 +302,7 @@ int process_arg_B(int opt, char *optarg)
 {
 	cache_block_size = 0;
 	uint32_t block_size = atoi(optarg);
-	int valid_assoc = cache_size / block_size;
-	if (block_size < 4 || check_exp(block_size) 
-		|| cache_size % block_size != 0
-		|| (cache_associativity == 3 
-			&& valid_assoc < 2)
-		|| (cache_associativity == 4
-			&& valid_assoc < 4)){
+	if (block_size < 4 || check_exp(block_size) == -1){
 			return -1;
 		}
 	cache_block_size = block_size;
@@ -334,13 +329,18 @@ void handle_cache_verbose(memory_access_entry_t entry, op_result_t ret)
 // Return 0 when everything is good. Otherwise return -1.
 int check_cache_parameters_valid()
 {
+	int valid_assoc = cache_size / cache_block_size;
 	if (cache_size == 0
 		|| cache_block_size == 0
 		|| cache_associativity == 0
 		|| cache_size % cache_block_size != 0
 		|| cache_block_size < 4
 		|| check_exp(cache_block_size) == -1
-		|| cache_associativity > 4){
+		|| cache_associativity > 4
+		|| (cache_associativity == 3 
+			&& valid_assoc < 2)
+		|| (cache_associativity == 4
+			&& valid_assoc < 4)){
 		return -1;
 	}
 	return 0;

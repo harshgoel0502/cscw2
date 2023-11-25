@@ -35,7 +35,7 @@ void handle_verbose(memory_access_entry_t *entry, uint32_t pa)
 {
 	//print the virtual address and the physical address in hex to match the spec
 	//print entry->verbose buffer
-	printf("%d 0x%08x 0x%08x%s", entry->accesstype ,entry->address, pa, entry->verbose);
+	printf("%c 0x%08x 0x%08x%s", entry->accesstype==READ?'R':'W',entry->address, pa, entry->verbose);
 }
 
 // Check if all input parameters are provided and valid.
@@ -132,8 +132,7 @@ int main(int argc, char *argv[])
 	// Check if all required parameters are provided
 	ret = check_parameters_valid();
 	if (ret) {
-		printf("One or more required parameters is missing.\n");
-		printf("%s\n", usage_str);
+		printf("Invalid Configuration\n");
        
 		return -1;
 	}
@@ -191,6 +190,10 @@ int main(int argc, char *argv[])
 	if (verbose) {
 		print_tlb_entries();
 		print_pt_entries();
+	}
+	else{
+		free_pt();
+		free_tlb();
 	}
 
     return 0;
