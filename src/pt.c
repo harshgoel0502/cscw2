@@ -177,12 +177,13 @@ page_t *get_free_page(){
 
 // print pt entries as per the spec
 void print_pt_entries(){
-    printf("\nPage Table Entries (Present-Bit Dirty-Bit PPN)\n");
+    printf("\nPage Table Entries (Present-Bit Dirty-Bit VPN PPN)\n");
     for(int i =0;i<pow(2,15);i++){
         if((page_table+i)->present==1){
             printf("%d %d 0x%05X 0x%05X\n",(page_table+i)->present,(page_table+i)->dirty,i,(page_table+i)->PPN);
         }
     }
+    printf("\n");
     free_pt();
 }
 
@@ -191,5 +192,5 @@ void print_pt_statistics(){
     printf("\n* Page Table Statistics *\n");
     printf("total accesses: %d\n", page_table_total_accesses);
     printf("page faults: %d\n", page_table_faults);
-    printf("page faults with dirty bit: %d\n", page_table_faults_with_dirty_page);
+    printf("page faults with a dirty bit: %d\n", page_table_faults_with_dirty_page);
 }
