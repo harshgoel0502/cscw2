@@ -20,6 +20,8 @@ void initialize()
 void free_memory()
 {
 	free_cache();
+	free_pt();
+	free_tlb();
 }
 
 // Print system-wide statistics.
@@ -182,7 +184,7 @@ int main(int argc, char *argv[])
 	fclose(trace_fp);
 
 	// Free the allocated memory.
-	free_memory();
+	// free_memory();
 
 	// Print statistics at the end of the simulation.
 	print_statistics();
@@ -192,8 +194,7 @@ int main(int argc, char *argv[])
 		print_pt_entries();
 	}
 	else{
-		free_pt();
-		free_tlb();
+		free_memory();
 	}
 
     return 0;
