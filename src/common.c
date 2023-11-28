@@ -3,6 +3,7 @@
 #include "pt.h"
 #include "tlb.h"
 #include <string.h>
+#include <stdlib.h>
 
 char *usage_str = "Usage: ./sim -S <S> -A <A> -B <B> -t <trace_file> [-v]";
 
@@ -72,6 +73,7 @@ uint32_t translate_address(memory_access_entry_t *entry){
 				dummy_read_page_from_disk(free_page->data, dummy_disk_block);
 				update_page_table(entry->address, free_page->ppn);
 				PPN = free_page->ppn;
+				free(free_page);
 			} else{
 				// if free page list is null
 				// evict 1 page from free page list
