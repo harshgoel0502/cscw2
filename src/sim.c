@@ -20,8 +20,6 @@ void initialize()
 void free_memory()
 {
 	free_cache();
-	free_pt();
-	free_tlb();
 }
 
 // Print system-wide statistics.
@@ -134,8 +132,7 @@ int main(int argc, char *argv[])
 	// Check if all required parameters are provided
 	ret = check_parameters_valid();
 	if (ret) {
-		printf("Invalid Configuration\n");
-       
+		printf("Invalid configuration\n");
 		return -1;
 	}
 
@@ -148,7 +145,9 @@ int main(int argc, char *argv[])
 	while (1) {
 		ret = INVALID;
 		process_trace_file_line(trace_fp, entry);
-
+		if (entry->address == -2) {
+			continue;
+		}
 		// Break if end of file is reached.
 		if (entry->address == -1) {
 			break;
@@ -184,7 +183,7 @@ int main(int argc, char *argv[])
 	fclose(trace_fp);
 
 	// Free the allocated memory.
-	// free_memory();
+	free_memory();
 
 	// Print statistics at the end of the simulation.
 	print_statistics();
@@ -193,9 +192,8 @@ int main(int argc, char *argv[])
 		print_tlb_entries();
 		print_pt_entries();
 	}
-	else{
-		free_memory();
-	}
+	free_pt();
+	free_tlb();
 
     return 0;
 } 

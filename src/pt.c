@@ -36,20 +36,26 @@ int add_pt_lru(uint32_t pa){
 	for (int i = 0;i<pt_lru_size;i++){
         uint32_t temp_pa = pt_lru_loc[i];
         if (temp_pa == pa){
-            for (int j=i;j<pt_lru_size;j++){
+            for (int j=i;j<pt_lru_size-1;j++){
                 pt_lru_loc[j] = pt_lru_loc[j+1];
             }
-            pt_lru_loc[pt_lru_size] = pa;
+            pt_lru_loc[pt_lru_size-1] = pa;
             return 0;
         }
     }
+    if(pt_lru_size==256){
+        for (int j=0;j<pt_lru_size-1;j++){
+            pt_lru_loc[j] = pt_lru_loc[j+1];
+        }
+        pt_lru_size--;
+    }
     pt_lru_size++;
-    pt_lru_loc[pt_lru_size]= pa;
+    pt_lru_loc[pt_lru_size-1]= pa;
     return 1;
 }
 uint32_t get_pt_lru(){
     uint32_t temp = *pt_lru_loc;
-    add_tlb_lru(temp);
+    add_pt_lru(temp);
     pt_lru_size--;
     return temp;
 }
@@ -57,7 +63,7 @@ void init_pt() {
     page_table_total_accesses = 0;
     page_table_faults = 0;
     page_table_faults_with_dirty_page = 0;
-    page_table = calloc(pow(2,15),sizeof(pt_entry_t));
+    page_table = calloc(pow(2,14),sizeof(pt_entry_t));
     pt_lru_loc = calloc(256,sizeof(uint32_t));
     pt_lru_size = 0;
     used_page_list = NULL;
@@ -114,7 +120,7 @@ int check_page_table(uint32_t address){
     //return PPN if the page is hit
     page_table_total_accesses++;
     address = get_vpn(address);
-    if(address > pow(2,15)-1 || (page_table+address)->present != 1) {
+    if(address > pow(2,14)-1 || (page_table+address)->present != 1) {
         page_table_faults++;
         return -1;
     }
@@ -126,6 +132,7 @@ int check_page_table(uint32_t address){
 void update_page_table(uint32_t address, uint32_t PPN){
     //set PPN for VPN in page table entry
     //set present bit in page table entry
+    uint32_t temp_store_address = address;
     address = get_vpn(address);
     add_pt_lru(address);
     page_t *new_page = (page_t *)malloc(sizeof(page_t));
@@ -136,7 +143,7 @@ void update_page_table(uint32_t address, uint32_t PPN){
     (page_table+address)->present = 1;
     (page_table+address)->PPN = PPN;
     
-    insert_or_update_tlb_entry(address, PPN);
+    insert_or_update_tlb_entry(temp_store_address, PPN);
 }
 
 //set the dirty bit of the entry to 1
@@ -152,13 +159,17 @@ page_t *get_victim_page(){
     uint32_t temp_address = get_pt_lru();
     if(used_page_list != NULL){
         page_t *temp_page = used_page_list;
+        if(temp_page->page_table_entry == (page_table+temp_address)){
+            if(temp_page->page_table_entry->dirty == 1) page_table_faults_with_dirty_page++;
+            temp_page->page_table_entry->present = 0;
+            return delete_from_top_of_ll(&used_page_list);
+        }
         while(temp_page->next != NULL){
-            page_t *prev_page = temp_page;
             temp_page = temp_page->next;
             if(temp_page->page_table_entry == (page_table+temp_address)){
                 if(temp_page->page_table_entry->dirty == 1) page_table_faults_with_dirty_page++;
-                prev_page->next = temp_page->next;
-                return temp_page;
+                temp_page->page_table_entry->present = 0;
+                return delete_from_top_of_ll(&temp_page);
             }
         }
     }
@@ -178,13 +189,11 @@ page_t *get_free_page(){
 // print pt entries as per the spec
 void print_pt_entries(){
     printf("\nPage Table Entries (Present-Bit Dirty-Bit VPN PPN)\n");
-    for(int i =0;i<pow(2,15);i++){
+    for(int i =0;i<pow(2,14);i++){
         if((page_table+i)->present==1){
-            printf("%d %d 0x%05X 0x%05X\n",(page_table+i)->present,(page_table+i)->dirty,i,(page_table+i)->PPN);
+            printf("%d %d 0x%05x 0x%05x\n",(page_table+i)->present,(page_table+i)->dirty,i,(page_table+i)->PPN);
         }
     }
-    printf("\n");
-    free_pt();
 }
 
 // print pt statistics as per the spec
@@ -192,5 +201,5 @@ void print_pt_statistics(){
     printf("\n* Page Table Statistics *\n");
     printf("total accesses: %d\n", page_table_total_accesses);
     printf("page faults: %d\n", page_table_faults);
-    printf("page faults with a dirty bit: %d\n", page_table_faults_with_dirty_page);
+    printf("page faults with dirty bit: %d\n", page_table_faults_with_dirty_page);
 }

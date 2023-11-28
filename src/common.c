@@ -22,7 +22,11 @@ memory_access_entry_t* process_trace_file_line(FILE *trace_fp, memory_access_ent
 
 	ret = fscanf(trace_fp, " %c %x\n", &operation, &address);
 	if (ret != EOF) {	
-        if (operation == 'R') {
+		uint32_t temp_add = (address >> 26);
+		if(temp_add!=0){
+			entry->address = -2;
+			entry->accesstype = INVALID;
+		} else if (operation == 'R') {
 			entry->address = address;
 			entry->accesstype = READ;
         } else if (operation == 'W') {

@@ -144,6 +144,12 @@ int add_lru(uint32_t pa,int lru_ref){
 				return 0;
 			}
 		}
+		if(lru_size[lru_ref]==assoc_size){
+			for (int j=0;j<lru_size[lru_ref]-1;j++){
+				lru_loc[lru_ref][j] = lru_loc[lru_ref][j+1];
+			}
+			lru_size[lru_ref]--;
+		}
 		lru_size[lru_ref]++;
 		lru_loc[lru_ref][lru_size[lru_ref]-1]= pa;
 		

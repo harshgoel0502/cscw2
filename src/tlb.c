@@ -100,6 +100,12 @@ int add_tlb_lru(uint32_t pa,int lru_ref){
 				return 0;
 			}
 		}
+		if(lru_size_tlb[lru_ref]==tlb_assoc_size){
+			for (int j=0;j<lru_size_tlb[lru_ref]-1;j++){
+				lru_loc_tlb[lru_ref][j] = lru_loc_tlb[lru_ref][j+1];
+			}
+			lru_size_tlb[lru_ref]--;
+		}
 		lru_size_tlb[lru_ref]++;
 		lru_loc_tlb[lru_ref][lru_size_tlb[lru_ref]-1]= pa;
 		return 1;
@@ -185,7 +191,7 @@ void insert_or_update_tlb_entry(uint32_t address, uint32_t PPN){
     // if the entry is not free, identify the victim entry and replace it
     //set PPN for VPN in tlb
     //set valid bit in tlb
-
+	address = getvpn(address);
 	for(int i = 0; i<tlb_assoc_size;i++){
 		tlb_entry_t *temp_tlb = tlb[tlb_ind_x]+i;
 		if (temp_tlb->valid == 0){
@@ -211,13 +217,51 @@ void insert_or_update_tlb_entry(uint32_t address, uint32_t PPN){
 }
 
 // print pt entries as per the spec
+// void print_tlb_entries(){
+//     //print the tlb entries
+//     printf("\nTLB Entries (Valid-Bit Dirty-Bit VPN PPN)\n");
+// 	for (int i = 0; i< temp;i++){
+// 		for(int j = 0; j<tlb_assoc_size;j++){
+// 			if((tlb[i]+j)->valid == 1){
+// 				printf("%d %d 0x%05x 0x%05x\n",(tlb[i]+j)->valid,(tlb[i]+j)->dirty,(tlb[i]+j)->VPN,(tlb[i]+j)->PPN);
+// 			}
+// 			else{
+// 				printf("%d %d - -\n",0,0);
+// 			}
+// 		}
+// 	}
+// }
+
 void print_tlb_entries(){
     //print the tlb entries
     printf("\nTLB Entries (Valid-Bit Dirty-Bit VPN PPN)\n");
-	for (int i = 0; i< temp;i++){
-		for(int j = 0; j<tlb_assoc_size;j++){
-			if((tlb[i]+j)->valid == 1){
-				printf("%d %d 0x%05X 0x%05X\n",(tlb[i]+j)->valid,(tlb[i]+j)->dirty,(tlb[i]+j)->VPN,(tlb[i]+j)->PPN);
+	if(tlb_associativity==1){
+		for (int i = 0; i< temp;i++){
+			for(int j = 0; j<tlb_assoc_size;j++){
+				if((tlb[i]+j)->valid == 1){
+					printf("%d %d 0x%05x 0x%05x\n",(tlb[i]+j)->valid,(tlb[i]+j)->dirty,(tlb[i]+j)->VPN,(tlb[i]+j)->PPN);
+				}
+				else{
+					printf("%d %d - -\n",0,0);
+				}
+			}
+		}
+	}
+	else{
+		for (int i = 0; i< temp;i++){
+			while(lru_size_tlb[i]>0){
+				uint32_t loop_val = get_tlb_lru(i);
+				for(int k = 0; k<tlb_assoc_size;k++){
+					if((tlb[i]+k)->valid == 1){
+						if((tlb[i]+k)->VPN == loop_val){
+							printf("%d %d 0x%05x 0x%05x\n",(tlb[i]+k)->valid,(tlb[i]+k)->dirty,(tlb[i]+k)->VPN,(tlb[i]+k)->PPN);
+						}
+					}
+					else if(lru_size_tlb[i]==0){
+						printf("%d %d - -\n",0,0);
+					}
+				}
+				
 			}
 		}
 	}
